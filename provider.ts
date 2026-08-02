@@ -1,0 +1,179 @@
+import type { IBasicProvider } from "@hydrooj/vjudge";
+import type { JudgeResultBody, RecordDoc } from "hydrooj";
+import { sleep, STATUS, UserModel } from "hydrooj";
+
+import { CE_CfApiMethod, fetchCfApi } from "./api";
+import type { SubmissionVerdict } from "./api.type";
+import { getCfAccountInfo } from "./user";
+
+function parseProblemId(id: string): [number, string] {
+    const [, contestId, problemId] = /^CF(\d+)([A-Z]+[0-9]*)$/.exec(id) ?? [];
+    if (!contestId || !problemId) {
+        throw new Error(`Invalid Codeforces problem ID: ${id}`);
+    }
+    return [Number.parseInt(contestId, 10), problemId];
+}
+
+type ExtendedSubmissionVerdict =
+    | SubmissionVerdict
+    | "COMPILING"
+    | "ACCEPTED"
+    | "PRESENTATION_ERROR"
+    | "OUTPUT_LIMIT_EXCEEDED"
+    | "EXTRA_TEST_PASSED"
+    | "COMPILE_ERROR"
+    | "RUNNING_&_JUDGING"
+    | "QUEUING"
+    | "RUNNING"
+    | "HAPPY_NEW_YEAR!";
+
+const STATUS_MAP: Record<ExtendedSubmissionVerdict, STATUS> = {
+    OK: STATUS.STATUS_ACCEPTED,
+    PARTIAL: STATUS.STATUS_WRONG_ANSWER,
+    COMPILATION_ERROR: STATUS.STATUS_COMPILE_ERROR,
+    RUNTIME_ERROR: STATUS.STATUS_RUNTIME_ERROR,
+    WRONG_ANSWER: STATUS.STATUS_WRONG_ANSWER,
+    TIME_LIMIT_EXCEEDED: STATUS.STATUS_TIME_LIMIT_EXCEEDED,
+    MEMORY_LIMIT_EXCEEDED: STATUS.STATUS_MEMORY_LIMIT_EXCEEDED,
+    IDLENESS_LIMIT_EXCEEDED: STATUS.STATUS_TIME_LIMIT_EXCEEDED,
+    SECURITY_VIOLATED: STATUS.STATUS_ETC,
+    CRASHED: STATUS.STATUS_ETC,
+    INPUT_PREPARATION_CRASHED: STATUS.STATUS_ETC,
+    CHALLENGED: STATUS.STATUS_ETC,
+    SKIPPED: STATUS.STATUS_IGNORED,
+    TESTING: STATUS.STATUS_JUDGING,
+    REJECTED: STATUS.STATUS_CANCELED,
+    SUBMITTED: STATUS.STATUS_WAITING,
+    FAILED: STATUS.STATUS_SYSTEM_ERROR,
+
+    // Extended verdicts
+    COMPILING: STATUS.STATUS_COMPILING,
+    ACCEPTED: STATUS.STATUS_ACCEPTED,
+    PRESENTATION_ERROR: STATUS.STATUS_WRONG_ANSWER,
+    OUTPUT_LIMIT_EXCEEDED: STATUS.STATUS_OUTPUT_LIMIT_EXCEEDED,
+    EXTRA_TEST_PASSED: STATUS.STATUS_ACCEPTED,
+    COMPILE_ERROR: STATUS.STATUS_COMPILE_ERROR,
+    "RUNNING_&_JUDGING": STATUS.STATUS_JUDGING,
+    QUEUING: STATUS.STATUS_WAITING,
+    RUNNING: STATUS.STATUS_JUDGING,
+    "HAPPY_NEW_YEAR!": STATUS.STATUS_ACCEPTED,
+};
+
+export class CfRemoteProvider implements IBasicProvider {
+    ensureLogin() {
+        return Promise.resolve(true);
+    }
+
+    getProblem() {
+        return Promise.resolve({
+            title: "",
+            data: {},
+            files: {},
+            tag: [],
+            content: "",
+        });
+    }
+
+    listProblem() {
+        return Promise.resolve([]);
+    }
+
+    async submitProblem(
+        id: string,
+        lang: string,
+        code: string | undefined,
+        info: RecordDoc,
+        next: (body: Partial<JudgeResultBody>) => void,
+        end: (body: Partial<JudgeResultBody>) => void,
+    ) {
+        console.log(`Submitting problem ${id} with language ${lang} and code length ${code?.length ?? 0}`);
+        try {
+            const normalizedCode = code?.split("\n")[0]?.trim();
+            const parsedCode = normalizedCode && Number.parseInt(normalizedCode, 10);
+            if (!Number.isInteger(parsedCode)) {
+                end({ status: STATUS.STATUS_SYSTEM_ERROR, message: "Codeforces submission ID is not a valid integer" });
+                return;
+            }
+            next({ status: STATUS.STATUS_WAITING, message: "Fetching submission result..." });
+            const udoc = await UserModel.getById(info.domainId, info.uid);
+            const cfAccountInfo = getCfAccountInfo(udoc);
+
+            if (!cfAccountInfo) {
+                end({ status: STATUS.STATUS_SYSTEM_ERROR, message: "Please link your Codeforces account." });
+                return;
+            }
+
+            const { uname, apiKey, secret } = cfAccountInfo;
+            const submissions = await fetchCfApi(
+                CE_CfApiMethod.User_Status,
+                {
+                    handle: uname,
+                    from: 1,
+                    count: 10,
+                },
+                apiKey,
+                secret,
+            );
+
+            const [contestId, problemId] = parseProblemId(id);
+            let submission = submissions.find((s) => s.id === parsedCode);
+            if (!submission || submission.problem.contestId !== contestId || submission.problem.index !== problemId) {
+                end({ status: STATUS.STATUS_WRONG_ANSWER, message: "Submission not found." });
+                return;
+            }
+
+            let counter = 0;
+            let errorCounter = 0;
+            while (submission.verdict === "TESTING" || submission.verdict === "SUBMITTED" || !submission.verdict) {
+                try {
+                    counter++;
+
+                    if (counter > 100) {
+                        end({ status: STATUS.STATUS_SYSTEM_ERROR, message: "Submission timed out." });
+                        return;
+                    }
+
+                    next({ status: STATUS_MAP[submission.verdict ?? "SUBMITTED"] });
+
+                    await sleep(counter < 50 ? 1500 : 5000);
+
+                    submission = (
+                        await fetchCfApi(
+                            CE_CfApiMethod.User_Status,
+                            {
+                                handle: uname,
+                                from: 1,
+                                count: 10,
+                            },
+                            apiKey,
+                            secret,
+                        )
+                    ).find((s) => s.id === parsedCode)!;
+                } catch {
+                    errorCounter++;
+                    if (errorCounter > 5) {
+                        end({ status: STATUS.STATUS_SYSTEM_ERROR, message: "Failed to fetch submission result." });
+                        return;
+                    }
+                }
+            }
+
+            const status = STATUS_MAP[submission.verdict];
+
+            end({
+                status,
+                score: status === STATUS.STATUS_ACCEPTED ? 100 : 0,
+                message: submission.verdict ?? "Unknown verdict",
+            });
+        } catch (error) {
+            end({
+                status: STATUS.STATUS_SYSTEM_ERROR,
+                message: error instanceof Error ? error.message : "An error occurred during submission",
+            });
+        }
+    }
+
+    waitForSubmission() {
+        return Promise.resolve();
+    }
+}
