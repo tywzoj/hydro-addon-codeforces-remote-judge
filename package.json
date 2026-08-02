@@ -1,0 +1,25 @@
+{
+  "main": "index.ts",
+  "license": "AGPL-3.0-only",
+  "dependencies": {},
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@hydrooj/ui-default": "^4.58.4",
+    "@types/fs-extra": "^11",
+    "@types/jquery": "^3",
+    "@types/js-yaml": "^4",
+    "@types/lodash": "^4",
+    "@types/node": "^24",
+    "@types/superagent": "^8",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "globals": "^17.3.0",
+    "hydrooj": "^5.0.4",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1"
+  },
+  "packageManager": "yarn@1.22.22"
+}
