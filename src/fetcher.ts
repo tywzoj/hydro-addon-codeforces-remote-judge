@@ -73,10 +73,10 @@ function generateProblemContent(contestId: number, index: string, name: string):
     return `
 请直接打开 <a href="${problemUrl}" target="_blank">Codeforces Problem ${contestId}${index}. ${name}</a>
 并使用与[本网站账号绑定](/home/codeforces_setting)的 Codeforces 账号登录。
-提交代码后将得到的 **提交记录 ID** 作为代码内容，提交即可评测。
+在 Codeforces 提交代码后，将得到的 **提交记录 ID** 作为代码内容，提交至本网站即可评测。
 
 Please directly open <a href="${problemUrl}" target="_blank">Codeforces Problem ${contestId}${index}. ${name}</a>
 and log in with the Codeforces account [linked to this website account](/home/codeforces_setting).
-After submitting the code, use the submission record ID obtained as the code content, and select any language for submission to be evaluated.
+After submitting the code on Codeforces, use the submission record ID obtained as the code content, and submit it to this website for evaluation.
     `.trim();
 }
