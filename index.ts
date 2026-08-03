@@ -17,6 +17,12 @@ export function apply(ctx: Context) {
     );
 
     ctx.inject(["vjudge"], (c) => {
+        c.vjudge.accounts.push({
+            _id: VJUDGE_NAME,
+            type: VJUDGE_NAME,
+            handle: "",
+            password: "",
+        });
         c.vjudge.addProvider(VJUDGE_NAME, CfRemoteProvider);
     });
 }
