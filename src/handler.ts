@@ -22,7 +22,12 @@ class HomeCodeforcesSettingHandler extends Handler {
     @param("secret", Types.String)
     async post(_, uname: string, apiKey: string, secret: string) {
         try {
-            await fetchCfApi(CE_CfApiMethod.User_Status, { handle: uname, from: 1, count: 1 }, apiKey, secret);
+            await fetchCfApi(
+                CE_CfApiMethod.User_Status,
+                { handle: uname, from: 1, count: 1, includeSources: true },
+                apiKey,
+                secret,
+            );
         } catch {
             throw new BadRequestError(
                 "Invalid Codeforces account information. Please check your username, API key, and secret.",

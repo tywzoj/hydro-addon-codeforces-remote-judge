@@ -132,6 +132,7 @@ export class CfRemoteProvider implements IBasicProvider {
                             handle: cfAccountInfo.uname,
                             from: 1,
                             count: 5,
+                            includeSources: true,
                         },
                         cfAccountInfo.apiKey,
                         cfAccountInfo.secret,
