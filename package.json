@@ -5,6 +5,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@hydrooj/ui-default": "^4.58.4",
+    "@hydrooj/vjudge": "^1.10.0",
     "@types/fs-extra": "^11",
     "@types/jquery": "^3",
     "@types/js-yaml": "^4",
@@ -21,5 +22,9 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"
   },
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "yarn@1.22.22",
+  "name": "hydro-addon-codeforces-remote-judge",
+  "version": "1.0.0",
+  "repository": "git@github.com:tywzoj/hydro-addon-codeforces-remote-judge.git",
+  "author": "Antares <antares.mi@outlook.com>"
 }

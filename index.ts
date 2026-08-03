@@ -1,3 +1,1 @@
-export function apply() {
-    console.log("Hello, world!");
-}
+export * from "./src/main";

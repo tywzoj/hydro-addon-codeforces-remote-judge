@@ -1,0 +1,42 @@
+{% extends "layout/home_base.html" %}
+{% block home_content %}
+<div class="row">
+  <div class="columns">
+    <div class="section">
+      <div class="section__header">
+        <h1 class="section__title" id="home_codeforces_setting_account">{{ _('Codeforces Account') }}</h1>
+      </div>
+      <div class="section__body">
+        <form method="post">
+          {{ form.form_text({
+               type:'text',
+               label:'Username',
+               name:'uname',
+               value: accountInfo.uname,
+               required:true
+             }) }}
+          {{ form.form_text({
+               type:'text',
+               label:'Codeforces API Key',
+               name:'apiKey',
+               value: accountInfo.apiKey,
+               required:true
+             }) }}
+          {{ form.form_text({
+               type:'password',
+               label:'Codeforces Secret',
+               name:'secret',
+               required:true
+             }) }}
+          <div class="row"><div class="columns">
+            <input type="submit" class="rounded primary button" value="{{ _('Save All Changes') }}">
+          </div></div>
+          <div class="row"><div class="columns">
+            <p>{{ _('You can get your Codeforces API Key and Secret from {0}').format('<a href="https://codeforces.com/settings/api" target="_blank">https://codeforces.com/settings/api</a>')|safe }}</p>
+          </div></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
