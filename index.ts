@@ -1,6 +1,7 @@
 import type { Context } from "hydrooj";
 import { Schema } from "hydrooj";
 
+import { VJUDGE_NAME } from "./constant";
 import { fetchCfProblems } from "./fetcher";
 import { CfRemoteProvider } from "./provider";
 
@@ -16,6 +17,6 @@ export function apply(ctx: Context) {
     );
 
     ctx.inject(["vjudge"], (c) => {
-        c.vjudge.addProvider("codeforces-remote", CfRemoteProvider);
+        c.vjudge.addProvider(VJUDGE_NAME, CfRemoteProvider);
     });
 }

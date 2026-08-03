@@ -4,6 +4,7 @@ import { sleep, STATUS, UserModel } from "hydrooj";
 
 import { CE_CfApiMethod, fetchCfApi } from "./api";
 import type { SubmissionVerdict } from "./api.type";
+import { VJUDGE_NAME } from "./constant";
 import { getCfAccountInfo } from "./user";
 
 function parseProblemId(id: string): [number, string] {
@@ -60,6 +61,13 @@ const STATUS_MAP: Record<ExtendedSubmissionVerdict, STATUS> = {
 };
 
 export class CfRemoteProvider implements IBasicProvider {
+    static Langs = {
+        [VJUDGE_NAME]: {
+            highlight: "text",
+            display: "Codeforces Submission ID",
+        },
+    };
+
     ensureLogin() {
         return Promise.resolve(true);
     }

@@ -1,34 +1,13 @@
-import { DomainModel, ProblemModel, SystemModel, yaml } from "hydrooj";
+import { DomainModel, ProblemModel, yaml } from "hydrooj";
 
 import { CE_CfApiMethod, fetchCfApi } from "./api";
-
-const langs = `
-codeforces-remote:
-  execute: none
-  display: Codeforces Remote
-  hidden: true
-  remote: codeforces-remote
-codeforces-remote.submissionid:
-  execute: /bin/echo For remote judge only
-  highlight: text
-  display: Submission ID
-`;
+import { VJUDGE_NAME } from "./constant";
 
 export async function fetchCfProblems(
     { domain, owner }: { domain: string; owner: number },
     report: (data: any) => void,
 ): Promise<true> {
-    const currentConfig = SystemModel.get("hydrooj.langs") as string;
-    if (!currentConfig.includes("codeforces-remote")) {
-        await SystemModel.set("hydrooj.langs", `${currentConfig}\n${langs}`);
-        report({
-            message: "Added Codeforces Remote Judge language configuration.",
-        });
-    }
-
-    const ddoc = await DomainModel.get(domain);
-
-    if (!ddoc) {
+    if (!(await DomainModel.get(domain))) {
         await DomainModel.add(domain, owner, "Codeforces", "Codeforces Problemset https://codeforces.com");
         await DomainModel.edit(domain, { share: "*" });
         report({
@@ -72,7 +51,7 @@ export async function fetchCfProblems(
                 Buffer.from(
                     yaml.dump({
                         type: "remote_judge",
-                        subType: "codeforces-remote",
+                        subType: VJUDGE_NAME,
                         target: problemId,
                     }),
                 ),
