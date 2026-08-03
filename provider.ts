@@ -1,9 +1,9 @@
-import type { IBasicProvider } from "@hydrooj/vjudge";
+import { type IBasicProvider } from "@hydrooj/vjudge";
 import type { JudgeResultBody, RecordDoc } from "hydrooj";
 import { sleep, STATUS, UserModel } from "hydrooj";
 
 import { CE_CfApiMethod, fetchCfApi } from "./api";
-import type { SubmissionVerdict } from "./api.type";
+import type { ISubmission, SubmissionVerdict } from "./api.type";
 import { VJUDGE_NAME } from "./constant";
 import { getCfAccountInfo } from "./user";
 
@@ -64,7 +64,7 @@ export class CfRemoteProvider implements IBasicProvider {
     static Langs = {
         [VJUDGE_NAME]: {
             highlight: "text",
-            display: "Codeforces Submission ID",
+            display: "Codeforces Remote Judge",
         },
     };
 
@@ -94,75 +94,71 @@ export class CfRemoteProvider implements IBasicProvider {
         next: (body: Partial<JudgeResultBody>) => void,
         end: (body: Partial<JudgeResultBody>) => void,
     ) {
-        console.log(`Submitting problem ${id} with language ${lang} and code length ${code?.length ?? 0}`);
         try {
             const normalizedCode = code?.split("\n")[0]?.trim();
             const parsedCode = normalizedCode && Number.parseInt(normalizedCode, 10);
             if (!Number.isInteger(parsedCode)) {
-                end({ status: STATUS.STATUS_SYSTEM_ERROR, message: "Codeforces submission ID is not a valid integer" });
-                return;
+                throw new Error("Codeforces submission ID is not a valid integer");
             }
+
             next({ status: STATUS.STATUS_WAITING, message: "Fetching submission result..." });
+
             const udoc = await UserModel.getById(info.domainId, info.uid);
             const cfAccountInfo = getCfAccountInfo(udoc);
 
             if (!cfAccountInfo) {
-                end({ status: STATUS.STATUS_SYSTEM_ERROR, message: "Please link your Codeforces account." });
-                return;
+                throw new Error(
+                    "Codeforces account not linked. Please link your Codeforces account in the user settings.",
+                );
             }
 
             const { uname, apiKey, secret } = cfAccountInfo;
-            const submissions = await fetchCfApi(
-                CE_CfApiMethod.User_Status,
-                {
-                    handle: uname,
-                    from: 1,
-                    count: 10,
-                },
-                apiKey,
-                secret,
-            );
-
             const [contestId, problemId] = parseProblemId(id);
-            let submission = submissions.find((s) => s.id === parsedCode);
-            if (!submission || submission.problem.contestId !== contestId || submission.problem.index !== problemId) {
-                end({ status: STATUS.STATUS_WRONG_ANSWER, message: "Submission not found." });
-                return;
-            }
 
             let counter = 0;
             let errorCounter = 0;
-            while (submission.verdict === "TESTING" || submission.verdict === "SUBMITTED" || !submission.verdict) {
+            let submission: ISubmission | undefined;
+
+            while (true) {
                 try {
                     counter++;
-
                     if (counter > 100) {
-                        end({ status: STATUS.STATUS_SYSTEM_ERROR, message: "Submission timed out." });
-                        return;
+                        throw new Error("Submission timed out");
+                    }
+
+                    const submissions = await fetchCfApi(
+                        CE_CfApiMethod.User_Status,
+                        {
+                            handle: uname,
+                            from: 1,
+                            count: 10,
+                        },
+                        apiKey,
+                        secret,
+                    );
+
+                    submission = submissions.find(
+                        (s) =>
+                            s.id === parsedCode && s.problem.contestId === contestId && s.problem.index === problemId,
+                    );
+
+                    if (!submission) {
+                        throw new Error("Submission not found");
                     }
 
                     next({ status: STATUS_MAP[submission.verdict ?? "SUBMITTED"] });
 
-                    await sleep(counter < 50 ? 1500 : 5000);
+                    if (submission.verdict && submission.verdict !== "TESTING" && submission.verdict !== "SUBMITTED") {
+                        break;
+                    }
 
-                    submission = (
-                        await fetchCfApi(
-                            CE_CfApiMethod.User_Status,
-                            {
-                                handle: uname,
-                                from: 1,
-                                count: 10,
-                            },
-                            apiKey,
-                            secret,
-                        )
-                    ).find((s) => s.id === parsedCode)!;
-                } catch {
+                    await sleep(counter < 50 ? 1500 : 5000);
+                } catch (error) {
                     errorCounter++;
                     if (errorCounter > 5) {
-                        end({ status: STATUS.STATUS_SYSTEM_ERROR, message: "Failed to fetch submission result." });
-                        return;
+                        throw error;
                     }
+                    next({ message: `Error fetching submission result. Retrying... (${errorCounter}/5)` });
                 }
             }
 
