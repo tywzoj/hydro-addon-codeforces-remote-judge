@@ -1,4 +1,4 @@
-import type { Udoc, User } from "hydrooj";
+import { type Udoc, type User, UserModel } from "hydrooj";
 
 export interface CfAccountInfo {
     uname: string;
@@ -12,4 +12,11 @@ export interface UdocWithCfAccountInfo extends Udoc {
 
 export function getCfAccountInfo(user: User): CfAccountInfo | undefined {
     return (user._udoc as UdocWithCfAccountInfo).cfAccountInfo;
+}
+
+export async function setCfAccountInfo(uid: number, info: CfAccountInfo): Promise<void> {
+    const $set: Partial<UdocWithCfAccountInfo> = {
+        cfAccountInfo: info,
+    };
+    await UserModel.setById(uid, $set);
 }
