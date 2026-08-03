@@ -10,8 +10,8 @@ export interface UdocWithCfAccountInfo extends Udoc {
     cfAccountInfo?: CfAccountInfo;
 }
 
-export function getCfAccountInfo(user: User): CfAccountInfo | undefined {
-    return (user._udoc as UdocWithCfAccountInfo).cfAccountInfo;
+export function getCfAccountInfo(user: User | Udoc): CfAccountInfo | undefined {
+    return ((user._udoc ?? user) as UdocWithCfAccountInfo).cfAccountInfo;
 }
 
 export async function setCfAccountInfo(uid: number, info: CfAccountInfo): Promise<CfAccountInfo> {
