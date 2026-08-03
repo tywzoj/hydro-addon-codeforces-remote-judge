@@ -63,6 +63,7 @@ const STATUS_MAP: Record<ExtendedSubmissionVerdict, STATUS> = {
 export class CfRemoteProvider implements IBasicProvider {
     static Langs = {
         [VJUDGE_NAME]: {
+            key: VJUDGE_NAME,
             highlight: "text",
             display: "Codeforces Remote Judge",
         },
