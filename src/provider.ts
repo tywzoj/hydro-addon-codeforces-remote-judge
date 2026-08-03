@@ -107,13 +107,12 @@ export class CfRemoteProvider implements IBasicProvider {
             const udoc = await UserModel.getById(info.domainId, info.uid);
             const cfAccountInfo = getCfAccountInfo(udoc);
 
-            if (!cfAccountInfo) {
+            if (!cfAccountInfo || !cfAccountInfo.uname || !cfAccountInfo.apiKey || !cfAccountInfo.secret) {
                 throw new Error(
                     "Codeforces account not linked. Please link your Codeforces account in the user settings.",
                 );
             }
 
-            const { uname, apiKey, secret } = cfAccountInfo;
             const [contestId, problemId] = parseProblemId(id);
 
             let counter = 0;
@@ -130,12 +129,12 @@ export class CfRemoteProvider implements IBasicProvider {
                     const submissions = await fetchCfApi(
                         CE_CfApiMethod.User_Status,
                         {
-                            handle: uname,
+                            handle: cfAccountInfo.uname,
                             from: 1,
                             count: 10,
                         },
-                        apiKey,
-                        secret,
+                        cfAccountInfo.apiKey,
+                        cfAccountInfo.secret,
                     );
 
                     submission = submissions.find(
