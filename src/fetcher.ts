@@ -8,8 +8,8 @@ export async function fetchCfProblems(
     report: (data: any) => void,
 ): Promise<true> {
     if (!(await DomainModel.get(domain))) {
-        await DomainModel.add(domain, owner, "Codeforces", "Codeforces Problemset https://codeforces.com");
-        await DomainModel.edit(domain, { share: "*" });
+        await DomainModel.add(domain, owner, "Codeforces", "Problems fetched from Codeforces API.");
+        await DomainModel.edit(domain, { share: "*", langs: VJUDGE_NAME });
         report({
             message: `Created domain ${domain} for Codeforces problems.`,
         });
