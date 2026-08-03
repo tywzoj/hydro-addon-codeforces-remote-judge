@@ -14,9 +14,12 @@ export function getCfAccountInfo(user: User): CfAccountInfo | undefined {
     return (user._udoc as UdocWithCfAccountInfo).cfAccountInfo;
 }
 
-export async function setCfAccountInfo(uid: number, info: CfAccountInfo): Promise<void> {
+export async function setCfAccountInfo(uid: number, info: CfAccountInfo): Promise<CfAccountInfo> {
     const $set: Partial<UdocWithCfAccountInfo> = {
         cfAccountInfo: info,
     };
-    await UserModel.setById(uid, $set);
+
+    const udoc = await UserModel.setById(uid, $set);
+
+    return (udoc as UdocWithCfAccountInfo).cfAccountInfo!;
 }

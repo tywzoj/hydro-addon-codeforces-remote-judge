@@ -3,6 +3,8 @@ import { Schema } from "hydrooj";
 
 import { VJUDGE_NAME } from "./constant";
 import { fetchCfProblems } from "./fetcher";
+import { applyHandlers } from "./handler";
+import { applyI18n } from "./i18n";
 import { CfRemoteProvider } from "./provider";
 
 export function apply(ctx: Context) {
@@ -25,4 +27,7 @@ export function apply(ctx: Context) {
         });
         c.vjudge.addProvider(VJUDGE_NAME, CfRemoteProvider);
     });
+
+    applyHandlers(ctx);
+    applyI18n(ctx);
 }

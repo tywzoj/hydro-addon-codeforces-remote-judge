@@ -1,6 +1,6 @@
 import { type IBasicProvider } from "@hydrooj/vjudge";
 import type { JudgeResultBody, RecordDoc } from "hydrooj";
-import { sleep, STATUS, UserModel } from "hydrooj";
+import { moment, sleep, STATUS, UserModel } from "hydrooj";
 
 import { CE_CfApiMethod, fetchCfApi } from "./api";
 import type { ISubmission, SubmissionVerdict } from "./api.type";
@@ -92,7 +92,7 @@ export class CfRemoteProvider implements IBasicProvider {
         lang: string,
         code: string | undefined,
         info: RecordDoc,
-        next: (body: Partial<JudgeResultBody>) => void,
+        next: (body: Partial<JudgeResultBody>) => Promise<void> | void,
         end: (body: Partial<JudgeResultBody>) => void,
     ) {
         try {
@@ -102,7 +102,7 @@ export class CfRemoteProvider implements IBasicProvider {
                 throw new Error("Codeforces submission ID is not a valid integer");
             }
 
-            next({ status: STATUS.STATUS_WAITING, message: "Fetching submission result..." });
+            await next({ status: STATUS.STATUS_JUDGING, message: "Fetching submission result..." });
 
             const udoc = await UserModel.getById(info.domainId, info.uid);
             const cfAccountInfo = getCfAccountInfo(udoc);
@@ -131,7 +131,7 @@ export class CfRemoteProvider implements IBasicProvider {
                         {
                             handle: cfAccountInfo.uname,
                             from: 1,
-                            count: 10,
+                            count: 5,
                         },
                         cfAccountInfo.apiKey,
                         cfAccountInfo.secret,
@@ -143,14 +143,26 @@ export class CfRemoteProvider implements IBasicProvider {
                     );
 
                     if (!submission) {
-                        throw new Error("Submission not found");
+                        end({
+                            status: STATUS.STATUS_SYSTEM_ERROR,
+                            message:
+                                "Submission not found in the last 5 submissions. Please check your submission ID and try again.",
+                        });
+                        return;
                     }
 
-                    next({ status: STATUS_MAP[submission.verdict ?? "SUBMITTED"] });
+                    await next({
+                        status: STATUS_MAP[submission.verdict ?? "SUBMITTED"],
+                        message: `Found submission submitted at ${moment(submission.creationTimeSeconds * 1000).format(
+                            "YYYY-MM-DD HH:mm:ss",
+                        )} with verdict: ${submission.verdict}`,
+                    });
 
                     if (submission.verdict && submission.verdict !== "TESTING" && submission.verdict !== "SUBMITTED") {
                         break;
                     }
+
+                    await next({ message: `Waiting for submission result... (${counter})` });
 
                     await sleep(counter < 50 ? 1500 : 5000);
                 } catch (error) {
@@ -158,7 +170,7 @@ export class CfRemoteProvider implements IBasicProvider {
                     if (errorCounter > 5) {
                         throw error;
                     }
-                    next({ message: `Error fetching submission result. Retrying... (${errorCounter}/5)` });
+                    await next({ message: `Error fetching submission result. Retrying... (${errorCounter}/5)` });
                 }
             }
 
