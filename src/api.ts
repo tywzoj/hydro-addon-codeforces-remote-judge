@@ -9,6 +9,11 @@ export const enum CE_CfApiMethod {
     User_Status = "user.status",
 }
 
+const CF_API_TIMEOUT = {
+    response: 15_000,
+    deadline: 30_000,
+} as const;
+
 export async function fetchCfApi<T extends CE_CfApiMethod>(
     methodName: T,
     params: APIRequestParams[T],
@@ -16,7 +21,7 @@ export async function fetchCfApi<T extends CE_CfApiMethod>(
     secret?: string,
 ): Promise<APIResponseData[T]> {
     const url = createApiUrl(methodName, params, apiKey, secret);
-    const resp = await superagent.get(url).set("Accept", "application/json");
+    const resp = await superagent.get(url).set("Accept", "application/json").timeout(CF_API_TIMEOUT);
     const body = resp.body as APIResponse<T>;
     if (body.status !== "OK") {
         throw new Error(`Codeforces API returned status: ${body.status}, comment: ${body.comment ?? "none"}`);
